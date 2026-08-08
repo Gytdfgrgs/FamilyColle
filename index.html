@@ -754,35 +754,6 @@
     }
   </style>
 </head>
- /* ===== СЕКЦИЯ "О СЕМЬЕ" (всегда видна) ===== */
-    .about-section {
-      display: block;
-      margin: 20px 0 10px;
-    }
-
-    /* адаптив */
-    @media (max-width: 700px) {
-      .container { padding: 16px; border-radius: 16px; }
-      .top-row { flex-direction: column; align-items: center; padding-left: 0; padding-top: 50px; }
-      .main-logo { font-size: 30px; }
-      .main-logo small { font-size: 14px; }
-      .section-heading { font-size: 20px; }
-      .promo-section { padding: 14px 16px; }
-      .leadership-section { padding: 14px 16px; }
-      .unions-section { padding: 14px 16px; }
-      .palace-section { padding: 14px 16px; }
-      .achievements-section { padding: 14px 16px; }
-      .forum-section { padding: 14px 16px; }
-      .rank-block { padding: 14px 16px; }
-      .rank-title { font-size: 16px; }
-      .leader-card { flex-direction: column; align-items: flex-start; }
-      .burger-btn { top: 14px; left: 14px; width: 38px; height: 38px; }
-      .drawer { width: 280px; left: -300px; }
-      .car-grid { grid-template-columns: 1fr 1fr; }
-      .vk-link-wrapper { flex-direction: column; align-items: flex-start; }
-    }
-  </style>
-</head>
 <body>
 
 <!-- ===== ОВЕРЛЕЙ ===== -->
@@ -826,4 +797,95 @@
     </div>
 
     <div class="desc-block">
-      <strong>Empire Colle</strong> — это не просто семья, это <strong>братство</strong>, скреплённое кровью и доверием. Мы — тень на улицах Flori
+      <strong>Empire Colle</strong> — это не просто семья, это <strong>братство</strong>, скреплённое кровью и доверием. Мы — тень на улицах Florida #2, где <strong>сила в единстве</strong>, а <strong>слово — закон</strong>. Наш путь — от мечты к империи.<br/>
+      <span style="color:#9400d3; font-weight:500;">«Вместе мы — сила, порознь — ничто».</span>
+    </div>
+
+    <!-- ===== ССЫЛКА НА VK ===== -->
+    <div class="vk-link-wrapper">
+      <span class="vk-icon">🔗</span>
+      <span class="vk-label">Вступить в беседу VK:</span>
+      <a href="https://vk.me/join/eUM0kxmrEP5hu10mL5oXiyKtHORcop5mfTI=" class="vk-link" target="_blank">https://vk.me/join/eUM0kxmrEP5hu10mL5oXiyKtHORcop5mfTI=</a>
+    </div>
+
+    <!-- ===== СТАТИСТИКА ===== -->
+    <div class="stats">
+      <div class="stat-item">
+        <div class="stat-number">70+</div>
+        <div class="stat-label">Численность участников семьи</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-number">Florida #2</div>
+        <div class="stat-label">Основной сервер деятельности</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== РАЗДЕЛ ДОСТИЖЕНИЙ ========== -->
+  <div class="achievements-section" id="achievementsSection">
+    <h2>🏆 Достижения</h2>
+    <div class="empty-message">Достижений пока нет</div>
+  </div>
+
+</div>
+
+<script>
+  // ===== УПРАВЛЕНИЕ МЕНЮ =====
+  const burgerBtn = document.getElementById('burgerBtn');
+  const drawer = document.getElementById('drawer');
+  const overlay = document.getElementById('overlay');
+  const closeDrawerBtn = document.getElementById('closeDrawerBtn');
+  const drawerBtns = document.querySelectorAll('.drawer-btn');
+
+  // Открыть/закрыть меню
+  burgerBtn.addEventListener('click', () => {
+    drawer.classList.toggle('open');
+    overlay.classList.toggle('visible');
+    burgerBtn.classList.toggle('active');
+  });
+
+  // Закрыть меню по кнопке X
+  closeDrawerBtn.addEventListener('click', () => {
+    drawer.classList.remove('open');
+    overlay.classList.remove('visible');
+    burgerBtn.classList.remove('active');
+  });
+
+  // Закрыть меню по оверлею
+  overlay.addEventListener('click', () => {
+    drawer.classList.remove('open');
+    overlay.classList.remove('visible');
+    burgerBtn.classList.remove('active');
+  });
+
+  // Обработчик кнопок навигации
+  drawerBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const target = btn.getAttribute('data-target');
+      
+      // Убрать active со всех кнопок
+      drawerBtns.forEach(b => b.classList.remove('active'));
+      // Добавить active текущей кнопке
+      btn.classList.add('active');
+
+      // Убрать visible со всех секций
+      document.querySelectorAll('.about-section, .achievements-section, .promo-section, .leadership-section, .unions-section, .palace-section, .forum-section').forEach(section => {
+        section.classList.remove('visible');
+      });
+
+      // Показать нужную секцию
+      const targetSection = document.getElementById(target + 'Section');
+      if (targetSection) {
+        targetSection.classList.add('visible');
+      }
+
+      // Закрыть меню
+      drawer.classList.remove('open');
+      overlay.classList.remove('visible');
+      burgerBtn.classList.remove('active');
+    });
+  });
+</script>
+
+</body>
+</html>
