@@ -1,0 +1,1491 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Empire Colle — Florida #2</title>
+  <!-- Подключаем Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js"></script>
+  
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: #0a0a0a;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 1100px;
+      width: 100%;
+      background: #1a1a1a;
+      border-radius: 20px;
+      padding: 30px 35px 35px;
+      border: 1px solid #2a2a2a;
+      box-shadow: 0 0 60px rgba(148, 0, 211, 0.15);
+      position: relative;
+    }
+
+    /* ===== БУРГЕР ===== */
+    .burger-btn {
+      position: absolute;
+      top: 20px;
+      left: 25px;
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      background: #222;
+      border: 1px solid #3a3a3a;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      gap: 4px;
+      cursor: pointer;
+      transition: 0.25s ease;
+      z-index: 10;
+    }
+    .burger-btn:hover { background: #333; border-color: #9b2d30; transform: scale(1.05); }
+    .burger-btn span {
+      display: block;
+      width: 20px;
+      height: 2px;
+      background: #ccc;
+      border-radius: 2px;
+      transition: 0.3s;
+    }
+    .burger-btn.active span:nth-child(1) { transform: rotate(45deg) translate(4px, 4px); }
+    .burger-btn.active span:nth-child(2) { opacity: 0; }
+    .burger-btn.active span:nth-child(3) { transform: rotate(-45deg) translate(4px, -4px); }
+
+    /* ===== ШТОРКА ===== */
+    .drawer {
+      position: fixed;
+      top: 0;
+      left: -320px;
+      width: 300px;
+      height: 100vh;
+      background: #141414;
+      border-right: 1px solid #2a2a2a;
+      padding: 80px 24px 30px;
+      transition: left 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+      z-index: 100;
+      overflow-y: auto;
+      box-shadow: 4px 0 40px rgba(0, 0, 0, 0.7);
+    }
+    .drawer.open { left: 0; }
+    .drawer .close-area {
+      position: absolute;
+      top: 18px;
+      right: 20px;
+      color: #888;
+      font-size: 24px;
+      cursor: pointer;
+      background: none;
+      border: none;
+    }
+    .drawer .close-area:hover { color: #fff; }
+    .drawer .drawer-title {
+      font-size: 18px;
+      font-weight: 700;
+      color: #9b2d30;
+      margin-bottom: 24px;
+      letter-spacing: 1px;
+      border-bottom: 1px solid #2a2a2a;
+      padding-bottom: 12px;
+    }
+    .drawer-btn {
+      display: block;
+      width: 100%;
+      padding: 12px 18px;
+      margin-bottom: 8px;
+      border-radius: 12px;
+      font-size: 14px;
+      font-weight: 500;
+      background: #1e1e1e;
+      color: #aaa;
+      border: 1px solid #2a2a2a;
+      cursor: pointer;
+      text-align: left;
+      transition: 0.2s ease;
+    }
+    .drawer-btn:hover { background: #2a2a2a; color: #fff; border-color: #9b2d30; transform: translateX(4px); }
+    .drawer-btn.active {
+      background: #9b2d30;
+      color: #fff;
+      border-color: #9b2d30;
+      box-shadow: 0 0 20px rgba(155, 45, 48, 0.2);
+    }
+    .drawer-btn.active:hover { background: #b33a3d; }
+
+    /* ===== ОВЕРЛЕЙ ===== */
+    .overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.6);
+      z-index: 99;
+      opacity: 0;
+      visibility: hidden;
+      transition: 0.3s ease;
+    }
+    .overlay.visible { opacity: 1; visibility: visible; }
+
+    /* ===== ВЕРХНЯЯ ПАНЕЛЬ ===== */
+    .top-row {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      border-bottom: 1px solid #2a2a2a;
+      padding: 10px 0 14px;
+      margin-bottom: 12px;
+      flex-wrap: wrap;
+      gap: 8px 16px;
+      position: relative;
+    }
+
+    /* ===== БЛОК АВТОРИЗАЦИИ ===== */
+    .auth-area {
+      position: absolute;
+      right: 0;
+      top: 50%;
+      transform: translateY(-50%);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .auth-area .auth-btn {
+      background: #2a2a2a;
+      border: 1px solid #3a3a3a;
+      color: #ccc;
+      padding: 10px 28px;
+      border-radius: 30px;
+      font-size: 17px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: 0.3s ease;
+      box-shadow: 0 0 15px rgba(155, 45, 48, 0.4);
+      letter-spacing: 0.5px;
+    }
+    .auth-area .auth-btn:hover {
+      background: #3a3a3a;
+      border-color: #9b2d30;
+      color: #fff;
+      box-shadow: 0 0 25px rgba(155, 45, 48, 0.8);
+      transform: scale(1.05);
+    }
+    .auth-area .user-info {
+      color: #9b2d30;
+      font-weight: 600;
+      font-size: 15px;
+      display: none;
+    }
+    .auth-area .user-info .logout-btn {
+      background: none;
+      border: none;
+      color: #666;
+      cursor: pointer;
+      font-size: 13px;
+      margin-left: 8px;
+      text-decoration: underline;
+    }
+    .auth-area .user-info .logout-btn:hover { color: #9b2d30; }
+
+    .auth-area.logged-in .user-info {
+      display: inline-block;
+    }
+    .auth-area.logged-in .auth-btn {
+      display: none;
+    }
+
+    /* ===== ЛОГОТИП (жирный) ===== */
+    .main-logo {
+      font-family: 'Georgia', 'Times New Roman', serif;
+      font-size: 56px;
+      font-weight: 900;
+      color: #9b2d30;
+      text-shadow:
+        0 0 10px rgba(155, 45, 48, 0.6),
+        0 0 30px rgba(148, 0, 211, 0.3),
+        0 0 80px rgba(155, 45, 48, 0.2);
+      letter-spacing: 6px;
+      text-transform: uppercase;
+      transition: 0.3s;
+    }
+    .main-logo:hover {
+      text-shadow:
+        0 0 20px rgba(155, 45, 48, 0.8),
+        0 0 60px rgba(148, 0, 211, 0.4),
+        0 0 120px rgba(155, 45, 48, 0.3);
+      transform: scale(1.02);
+    }
+    .main-logo small {
+      font-size: 18px;
+      font-weight: 400;
+      color: #888;
+      text-shadow: none;
+      letter-spacing: 2px;
+    }
+
+    /* ===== СТАРЫЕ СТИЛИ РАЗДЕЛОВ ===== */
+    .section-heading {
+      font-size: 26px;
+      font-weight: 700;
+      color: #9b2d30;
+      margin: 16px 0 4px;
+      letter-spacing: 1px;
+    }
+    .section-heading small { font-weight: 400; font-size: 16px; color: #888; margin-left: 10px; }
+
+    .desc-block {
+      margin: 18px 0 28px;
+      font-size: 15px;
+      line-height: 1.8;
+      color: #ccc;
+      border-left: 3px solid #9400d3;
+      background: #151515;
+      border-radius: 0 12px 12px 0;
+      padding: 14px 20px;
+    }
+    .desc-block strong { color: #fff; }
+    .desc-block .highlight { color: #9400d3; font-weight: 600; }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 16px;
+      margin: 12px 0 16px;
+    }
+    .stat-item {
+      background: #111;
+      border: 1px solid #2a2a2a;
+      border-radius: 16px;
+      padding: 16px 12px;
+      text-align: center;
+      transition: 0.2s;
+    }
+    .stat-item:hover { border-color: #9400d3; background: #141414; transform: scale(1.02); }
+    .stat-number { font-size: 32px; font-weight: 700; color: #9400d3; letter-spacing: 1px; }
+    .stat-label { font-size: 13px; color: #888; margin-top: 4px; letter-spacing: 0.5px; }
+
+    /* ===== НОВЫЙ БЛОК С ИКОНКОЙ VK ===== */
+    .vk-link-wrapper {
+      margin: 14px 0 6px;
+      padding: 12px 18px;
+      background: #161616;
+      border-radius: 14px;
+      border: 1px solid #2a2a2a;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      transition: 0.2s;
+    }
+    .vk-link-wrapper:hover { border-color: #9b2d30; background: #1a1a1a; }
+    .vk-link-wrapper .vk-icon {
+      font-size: 28px;
+      color: #9b2d30;
+      transition: 0.3s;
+    }
+    .vk-link-wrapper .vk-icon:hover {
+      color: #b33a3d;
+      transform: scale(1.2);
+    }
+
+    /* ===== ВСЕ РАЗДЕЛЫ (включая about) скрыты по умолчанию ===== */
+    .about-section,
+    .promo-section,
+    .leadership-section,
+    .unions-section,
+    .palace-section,
+    .achievements-section,
+    .forum-section,
+    .giveaway-section {
+      display: none;
+      margin: 20px 0 10px;
+      padding: 20px 24px;
+      background: #111;
+      border-radius: 16px;
+      border: 1px solid #2a2a2a;
+      animation: fadeSlide 0.35s ease;
+    }
+    /* Показываем только тот, у которого есть класс visible */
+    .about-section.visible,
+    .promo-section.visible,
+    .leadership-section.visible,
+    .unions-section.visible,
+    .palace-section.visible,
+    .achievements-section.visible,
+    .forum-section.visible,
+    .giveaway-section.visible {
+      display: block;
+    }
+
+    @keyframes fadeSlide {
+      0% { opacity: 0; transform: translateY(-12px); }
+      100% { opacity: 1; transform: translateY(0); }
+    }
+
+    .promo-section h2, .leadership-section h2, .unions-section h2,
+    .palace-section h2, .achievements-section h2, .forum-section h2,
+    .giveaway-section h2 {
+      font-size: 22px;
+      font-weight: 700;
+      color: #9400d3;
+      margin-bottom: 20px;
+      letter-spacing: 1px;
+      border-bottom: 1px solid #2a2a2a;
+      padding-bottom: 12px;
+    }
+
+    .rank-block {
+      background: #161616;
+      border-radius: 14px;
+      padding: 18px 22px;
+      margin-bottom: 18px;
+      border-left: 4px solid #9b2d30;
+      transition: 0.2s;
+    }
+    .rank-block:hover { border-left-color: #b33a3d; background: #1a1a1a; }
+    .rank-title {
+      font-size: 18px;
+      font-weight: 700;
+      color: #fff;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .rank-title .arrow { color: #9b2d30; font-weight: 300; margin: 0 4px; }
+    .rank-title .badge {
+      font-size: 13px;
+      font-weight: 400;
+      color: #888;
+      background: #222;
+      padding: 2px 14px;
+      border-radius: 30px;
+      border: 1px solid #333;
+    }
+    .rank-title .badge.important { color: #ffd700; border-color: #664400; background: #221100; }
+    .rank-list {
+      list-style: none;
+      padding: 0;
+      margin: 6px 0 0;
+    }
+    .rank-list li {
+      color: #bbb;
+      font-size: 14px;
+      line-height: 1.7;
+      padding: 3px 0 3px 24px;
+      position: relative;
+    }
+    .rank-list li::before {
+      content: "▸";
+      color: #9b2d30;
+      position: absolute;
+      left: 2px;
+      font-weight: 700;
+    }
+    .rank-list li strong { color: #fff; font-weight: 600; }
+    .rank-list li .highlight { color: #9400d3; }
+
+    .leader-card {
+      background: #161616;
+      border-radius: 14px;
+      padding: 18px 22px;
+      margin-bottom: 14px;
+      border-left: 4px solid #9b2d30;
+      transition: 0.2s;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .leader-card:hover { border-left-color: #b33a3d; background: #1a1a1a; }
+    .leader-card .name { font-size: 18px; font-weight: 700; color: #fff; }
+    .leader-card .rank { font-size: 14px; color: #9400d3; font-weight: 600; }
+    .leader-card .phone {
+      font-size: 14px;
+      color: #888;
+      background: #222;
+      padding: 4px 14px;
+      border-radius: 30px;
+      border: 1px solid #333;
+    }
+    .leader-card .phone .highlight { color: #9b2d30; font-weight: 600; }
+
+    .union-card {
+      background: #161616;
+      border-radius: 14px;
+      padding: 18px 22px;
+      margin-bottom: 14px;
+      border-left: 4px solid #9b2d30;
+      transition: 0.2s;
+    }
+    .union-card:hover { border-left-color: #b33a3d; background: #1a1a1a; }
+    .union-card .union-name { font-size: 18px; font-weight: 700; color: #fff; }
+    .union-card .union-leader { font-size: 14px; color: #9400d3; margin-top: 4px; }
+
+    .palace-info {
+      background: #161616;
+      border-radius: 14px;
+      padding: 18px 22px;
+      margin-bottom: 18px;
+      border-left: 4px solid #9b2d30;
+    }
+    .palace-info .address { font-size: 16px; color: #fff; font-weight: 600; }
+    .palace-info .address small { font-weight: 400; color: #888; }
+    .palace-info .location { font-size: 14px; color: #9400d3; margin-top: 4px; }
+
+    /* ===== АВТОПАРК С ИКОНКАМИ ===== */
+    .car-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 12px;
+      margin-top: 10px;
+    }
+    .car-item {
+      background: #1a1a1a;
+      border: 1px solid #2a2a2a;
+      border-radius: 12px;
+      padding: 14px 16px;
+      text-align: center;
+      transition: 0.2s;
+    }
+    .car-item:hover { border-color: #9b2d30; background: #222; transform: scale(1.02); }
+    .car-item .car-icon {
+      font-size: 32px;
+      color: #9b2d30;
+      display: block;
+      margin-bottom: 6px;
+    }
+    .car-item .car-name { color: #fff; font-weight: 600; font-size: 14px; }
+
+    /* ===== СТИЛИ ДЛЯ ДОСТИЖЕНИЙ ===== */
+    .achievement-card {
+      background: #161616;
+      border-radius: 14px;
+      padding: 18px 22px;
+      margin-bottom: 14px;
+      border-left: 4px solid #ffd700;
+      transition: 0.2s;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .achievement-card:hover { border-left-color: #ffaa00; background: #1a1a1a; }
+    .achievement-card .ach-left {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .achievement-card .ach-nick {
+      font-size: 17px;
+      font-weight: 700;
+      color: #fff;
+    }
+    .achievement-card .ach-nick i {
+      color: #ffd700;
+      margin-right: 8px;
+    }
+    .achievement-card .ach-title {
+      font-size: 15px;
+      color: #ffd700;
+      font-weight: 600;
+    }
+    .achievement-card .ach-date {
+      font-size: 13px;
+      color: #888;
+      background: #222;
+      padding: 4px 14px;
+      border-radius: 30px;
+      border: 1px solid #333;
+      white-space: nowrap;
+    }
+    .achievement-card .ach-date .status {
+      color: #4caf50;
+      font-weight: 600;
+    }
+
+    .empty-message {
+      color: #888;
+      font-size: 16px;
+      text-align: center;
+      padding: 30px 20px;
+      background: #161616;
+      border-radius: 14px;
+      border: 1px dashed #2a2a2a;
+    }
+
+    .forum-card {
+      background: #161616;
+      border-radius: 14px;
+      padding: 18px 22px;
+      border-left: 4px solid #9b2d30;
+      transition: 0.2s;
+    }
+    .forum-card:hover { border-left-color: #b33a3d; background: #1a1a1a; }
+    .forum-card .forum-link {
+      display: inline-block;
+      margin-top: 8px;
+      color: #9400d3;
+      font-size: 15px;
+      font-weight: 600;
+      text-decoration: none;
+      word-break: break-all;
+    }
+    .forum-card .forum-link:hover { color: #b366d6; text-decoration: underline; }
+    .forum-card .forum-label { color: #aaa; font-size: 14px; }
+    .forum-card .forum-link i {
+      margin-right: 8px;
+      color: #9b2d30;
+    }
+
+    /* ===== СТИЛИ ДЛЯ РОЗЫГРЫША ===== */
+    .giveaway-card {
+      background: #161616;
+      border-radius: 14px;
+      padding: 22px 26px;
+      border-left: 4px solid #ffd700;
+      transition: 0.2s;
+      margin-bottom: 14px;
+    }
+    .giveaway-card:hover { border-left-color: #ffaa00; background: #1a1a1a; }
+    .giveaway-card .giveaway-title {
+      font-size: 20px;
+      font-weight: 700;
+      color: #ffd700;
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .giveaway-card .giveaway-title i { color: #ffd700; }
+    .giveaway-card .giveaway-creator {
+      color: #aaa;
+      font-size: 14px;
+      margin-bottom: 8px;
+    }
+    .giveaway-card .giveaway-creator strong { color: #fff; }
+    .giveaway-card .giveaway-prize {
+      font-size: 18px;
+      color: #fff;
+      margin-bottom: 6px;
+    }
+    .giveaway-card .giveaway-prize .prize-amount {
+      color: #ffd700;
+      font-weight: 700;
+    }
+    .giveaway-card .giveaway-end {
+      color: #888;
+      font-size: 14px;
+      margin-bottom: 12px;
+    }
+    .giveaway-card .giveaway-end strong { color: #ccc; }
+
+    .countdown-timer {
+      display: flex;
+      gap: 20px;
+      flex-wrap: wrap;
+      background: #0d0d0d;
+      border-radius: 12px;
+      padding: 14px 20px;
+      border: 1px solid #2a2a2a;
+      margin-top: 4px;
+    }
+    .countdown-timer .time-block {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .countdown-timer .time-block .number {
+      font-size: 36px;
+      font-weight: 700;
+      color: #ffd700;
+      font-family: 'Courier New', monospace;
+      min-width: 60px;
+      text-align: center;
+    }
+    .countdown-timer .time-block .label {
+      font-size: 11px;
+      color: #888;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    .countdown-timer .separator {
+      font-size: 32px;
+      color: #555;
+      font-weight: 300;
+      display: flex;
+      align-items: center;
+    }
+    .countdown-ended {
+      color: #ff6b6b;
+      font-size: 24px;
+      font-weight: 700;
+      text-align: center;
+      padding: 16px 0;
+      background: #1a0a0a;
+      border-radius: 12px;
+      border: 1px solid #ff6b6b;
+    }
+
+    /* ===== НОВЫЙ ФУТЕР (только VK) ===== */
+    .footer-line {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 24px;
+      padding-top: 16px;
+      border-top: 1px solid #2a2a2a;
+      font-size: 13px;
+      color: #666;
+      letter-spacing: 0.3px;
+    }
+    .footer-line a {
+      color: #888;
+      transition: all 0.3s ease;
+      display: inline-block;
+      font-size: 22px;
+    }
+    .footer-line a:hover {
+      color: #9b2d30 !important;
+      transform: scale(1.2);
+    }
+    .footer-line .red { color: #9b2d30; font-weight: 700; }
+    .footer-line .purple { color: #9400d3; }
+
+    /* ===== МОДАЛЬНОЕ ОКНО АВТОРИЗАЦИИ ===== */
+    .auth-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.75);
+      z-index: 200;
+      display: none;
+      justify-content: center;
+      align-items: center;
+    }
+    .auth-overlay.open { display: flex; }
+    .auth-modal {
+      background: #1a1a1a;
+      border: 1px solid #2a2a2a;
+      border-radius: 24px;
+      max-width: 420px;
+      width: 90%;
+      padding: 30px 28px;
+      position: relative;
+      box-shadow: 0 0 60px rgba(148, 0, 211, 0.3);
+    }
+    .auth-modal .close-auth {
+      position: absolute;
+      top: 16px;
+      right: 20px;
+      background: none;
+      border: none;
+      color: #888;
+      font-size: 24px;
+      cursor: pointer;
+    }
+    .auth-modal .close-auth:hover { color: #fff; }
+
+    .auth-modal .main-title {
+      font-size: 28px;
+      font-weight: 900;
+      color: #9b2d30;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      text-align: center;
+      margin-bottom: 2px;
+    }
+    .auth-modal .sub-title {
+      color: #888;
+      font-size: 14px;
+      text-align: center;
+      margin-bottom: 20px;
+      letter-spacing: 0.5px;
+    }
+    .auth-modal .sub-title span { color: #9b2d30; }
+
+    .auth-tabs {
+      display: flex;
+      gap: 20px;
+      justify-content: center;
+      border-bottom: none;
+      margin-bottom: 20px;
+    }
+    .auth-tabs .tab {
+      border-bottom: none;
+      font-size: 16px;
+      font-weight: 600;
+      padding: 6px 0;
+      color: #888;
+      cursor: pointer;
+      transition: 0.2s;
+      position: relative;
+    }
+    .auth-tabs .tab.active {
+      color: #fff;
+    }
+    .auth-tabs .tab.active::after {
+      content: '';
+      position: absolute;
+      bottom: -2px;
+      left: 0;
+      width: 100%;
+      height: 2px;
+      background: #9b2d30;
+    }
+    .auth-tabs .tab:hover { color: #fff; }
+
+    .auth-form {
+      display: none;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .auth-form.active { display: flex; }
+
+    .auth-form label {
+      color: #aaa;
+      font-size: 14px;
+      font-weight: 500;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .auth-form input {
+      background: #111;
+      border: 1px solid #2a2a2a;
+      border-radius: 10px;
+      padding: 10px 14px;
+      color: #fff;
+      font-size: 15px;
+      outline: none;
+      transition: 0.2s;
+    }
+    .auth-form input:focus { border-color: #9b2d30; }
+
+    .auth-form .auth-submit {
+      background: #9b2d30;
+      border: none;
+      border-radius: 30px;
+      padding: 12px;
+      font-size: 16px;
+      font-weight: 600;
+      color: #fff;
+      cursor: pointer;
+      transition: 0.2s;
+      margin-top: 8px;
+    }
+    .auth-form .auth-submit:hover { background: #b33a3d; transform: scale(1.02); }
+
+    .guest-btn {
+      background: transparent;
+      border: 1px solid #3a3a3a;
+      border-radius: 30px;
+      padding: 10px;
+      font-size: 14px;
+      color: #888;
+      cursor: pointer;
+      transition: 0.2s;
+      margin-top: 8px;
+      width: 100%;
+      text-align: center;
+    }
+    .guest-btn:hover { background: #2a2a2a; color: #fff; border-color: #9b2d30; }
+
+    .auth-error {
+      color: #ff6b6b;
+      font-size: 13px;
+      text-align: center;
+      min-height: 20px;
+    }
+
+    .note-list {
+      font-size: 13px;
+      color: #888;
+      line-height: 1.6;
+      margin-top: 10px;
+      padding-left: 20px;
+      border-left: 2px solid #9b2d30;
+      list-style: none;
+    }
+    .note-list li { margin-bottom: 4px; }
+    .note-list strong { color: #aaa; }
+
+    .or-divider {
+      text-align: center;
+      color: #555;
+      font-size: 14px;
+      margin: 12px 0 6px;
+    }
+
+    /* ===== АДАПТИВ ===== */
+    @media (max-width: 700px) {
+      .container { padding: 16px; border-radius: 16px; }
+      .top-row { flex-direction: column; align-items: center; padding-left: 0; padding-top: 50px; }
+      .main-logo {
+        font-size: 34px;
+        letter-spacing: 3px;
+      }
+      .main-logo small { font-size: 14px; }
+      .section-heading { font-size: 20px; }
+      .promo-section, .leadership-section, .unions-section, .palace-section, .achievements-section, .forum-section,
+      .giveaway-section { padding: 14px 16px; }
+      .rank-block { padding: 14px 16px; }
+      .rank-title { font-size: 16px; }
+      .leader-card { flex-direction: column; align-items: flex-start; }
+      .burger-btn { top: 14px; left: 14px; width: 38px; height: 38px; }
+      .drawer { width: 280px; left: -300px; }
+      .car-grid { grid-template-columns: 1fr 1fr; }
+      .vk-link-wrapper { flex-direction: column; align-items: flex-start; }
+      .auth-area {
+        position: static;
+        transform: none;
+        margin-top: 10px;
+        justify-content: center;
+      }
+      .auth-modal { padding: 20px 16px; }
+      .auth-modal .main-title { font-size: 22px; }
+      .footer-line { flex-direction: column; align-items: center; text-align: center; }
+      .countdown-timer { gap: 10px; justify-content: center; }
+      .countdown-timer .time-block .number { font-size: 28px; min-width: 40px; }
+      .countdown-timer .separator { font-size: 24px; }
+      .giveaway-card { padding: 16px 18px; }
+      .achievement-card { flex-direction: column; align-items: flex-start; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ===== ОВЕРЛЕЙ ДЛЯ ШТОРКИ ===== -->
+<div class="overlay" id="overlay"></div>
+
+<!-- ===== ШТОРКА ===== -->
+<div class="drawer" id="drawer">
+  <button class="close-area" id="closeDrawerBtn">✕</button>
+  <div class="drawer-title">EMPIRE COLLE</div>
+  <button class="drawer-btn active" data-target="about">О семье</button>
+  <button class="drawer-btn" data-target="achievements">Достижения</button>
+  <button class="drawer-btn" data-target="giveaway">Розыгрыши</button>
+  <button class="drawer-btn" data-target="leadership">Руководство</button>
+  <button class="drawer-btn" data-target="unions">Союзы</button>
+  <button class="drawer-btn" data-target="promo">Повышение</button>
+  <button class="drawer-btn" data-target="palace">Дворец и автопарк</button>
+  <button class="drawer-btn" data-target="forum">Форум</button>
+</div>
+
+<!-- ===== ОСНОВНОЙ КОНТЕЙНЕР ===== -->
+<div class="container">
+
+  <div class="burger-btn" id="burgerBtn">
+    <span></span><span></span><span></span>
+  </div>
+
+  <div class="top-row">
+    <div class="main-logo">
+      Empire Colle <small>— Florida #2</small>
+    </div>
+    <div class="auth-area" id="authArea">
+      <button class="auth-btn" id="loginBtn">Войти</button>
+      <span class="user-info" id="userInfo">
+        👤 <span id="usernameDisplay"></span>
+        <button class="logout-btn" id="logoutBtn">Выйти</button>
+      </span>
+    </div>
+  </div>
+
+  <!-- ===== РАЗДЕЛЫ ===== -->
+
+  <!-- О семье (по умолчанию виден) -->
+  <div class="about-section visible" id="aboutSection">
+    <div class="section-heading">
+      I. Описание Empire Colle <small>— Florida #2</small>
+    </div>
+    <div class="desc-block">
+      <strong>Empire Colle</strong> — это не просто семья, это <strong>братство</strong>, скреплённое кровью и доверием. Мы — тень на улицах Florida #2, где <strong>сила в единстве</strong>, а <strong>слово — закон</strong>. Наш путь — от мечты к империи.<br/>
+      <span style="color:#9400d3; font-weight:500;">«Вместе мы — сила, порознь — ничто».</span>
+    </div>
+    <div class="vk-link-wrapper">
+      <a href="https://vk.me/join/eUM0kxmrEP5hu10mL5oXiyKtHORcop5mfTI=" target="_blank" style="display: flex; align-items: center; gap: 10px; text-decoration: none; color: inherit;">
+        <i class="fab fa-vk vk-icon"></i>
+        <span style="color: #ccc; font-size: 14px;">Вступить в беседу VK</span>
+      </a>
+    </div>
+    <div class="stats">
+      <div class="stat-item"><div class="stat-number">70+</div><div class="stat-label">Численность участников семьи</div></div>
+      <div class="stat-item"><div class="stat-number">Florida #2</div><div class="stat-label">Основной сервер деятельности</div></div>
+    </div>
+  </div>
+
+  <!-- Достижения -->
+  <div class="achievements-section" id="achievementsSection">
+    <h2>🏆 Достижения</h2>
+    <div class="achievement-card">
+      <div class="ach-left">
+        <div class="ach-nick"><i class="fas fa-user"></i> Anthony_Russell</div>
+        <div class="ach-title">⭐ Администратор 1lvl</div>
+      </div>
+      <div class="ach-date">📅 29.07.2026 - 17.08.2026 <span class="status">(ПСЖ)</span></div>
+    </div>
+  </div>
+
+  <!-- Розыгрыши -->
+  <div class="giveaway-section" id="giveawaySection">
+    <h2>🎁 Розыгрыши</h2>
+    <div class="giveaway-card">
+      <div class="giveaway-title">
+        <i class="fas fa-gift"></i> Розыгрыш #1
+      </div>
+      <div class="giveaway-creator">
+        <i class="fas fa-user"></i> Создатель: <strong>Matthew_Colle</strong>
+      </div>
+      <div class="giveaway-prize">
+        <i class="fas fa-coins"></i> Приз: <span class="prize-amount">500.000$</span> игровых
+      </div>
+      <div class="giveaway-end">
+        <i class="fas fa-clock"></i> Окончание: <strong>17.08.2026 19:00</strong> по МСК
+      </div>
+      <div id="countdownContainer">
+        <!-- Таймер будет вставлен сюда через JS -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Руководство -->
+  <div class="leadership-section" id="leadershipSection">
+    <h2>👑 Руководство</h2>
+    <div class="leader-card"><span class="name">Anthony Russell</span><span class="rank">Глава синдиката (7)</span><span class="phone">📞 <span class="highlight">280-780</span></span></div>
+    <div class="leader-card"><span class="name">Matthew Colle</span><span class="rank">Главный зам синдиката (6)</span><span class="phone">📞 <span class="highlight">811-817</span></span></div>
+    <div class="leader-card"><span class="name">Kennedy Colle</span><span class="rank">Зам синдиката (5)</span><span class="phone">📞 <span class="highlight">xxx-xxx</span></span></div>
+  </div>
+
+  <!-- Союзы -->
+  <div class="unions-section" id="unionsSection">
+    <h2>🤝 Союзы</h2>
+    <div class="union-card"><div class="union-name">Hanow Squad</div><div class="union-leader">Don Hanow: Hakim Hanow</div></div>
+    <div class="union-card"><div class="union-name"></div><div class="union-leader"></div></div>
+    <div class="union-card"><div class="union-name"></div><div class="union-leader"></div></div>
+  </div>
+
+  <!-- Повышение -->
+  <div class="promo-section" id="promoSection">
+    <h2>📈 Повышение в ранге</h2>
+    <div class="rank-block">
+      <div class="rank-title"><span>[1] Бегунок</span><span class="arrow">➔</span><span>[2] Барыга</span><span class="badge">Требования</span></div>
+      <ul class="rank-list">
+        <li><strong>Фарм:</strong> Положить на склад семьи 100г наркотиков.</li>
+        <li><strong>RP:</strong> Нанести 2 граффити с логотипом нашей семьи на районе по RP (минимум 5 строк отыгровок через /me, /do, /todo на каждый тег).</li>
+        <li><strong>RP:</strong> Отыграть детальную чистку и смазку своего рабочего пистолета на базе.</li>
+        <li><strong>Срок нахождения в семье:</strong> 1 день.</li>
+      </ul>
+    </div>
+    <div class="rank-block">
+      <div class="rank-title"><span>[2] Барыга</span><span class="arrow">➔</span><span>[3] Поставщик</span><span class="badge">Требования</span></div>
+      <ul class="rank-list">
+        <li><strong>Фарм:</strong> Положить на склад семьи 1 000 любых патронов.</li>
+        <li><strong>RP:</strong> Провести уличную RP-сделку по продаже наркотиков или патронов любому гражданскому на районе.</li>
+        <li><strong>RP:</strong> Отыграть по RP мытьё 2-х машин на нашей базе.</li>
+        <li><strong>Активность:</strong> Присутствовать на 1 собрании семьи или общем сборе.</li>
+        <li><strong>Срок нахождения на ранге:</strong> 2 дня.</li>
+      </ul>
+    </div>
+    <div class="rank-block">
+      <div class="rank-title"><span>[3] Поставщик</span><span class="arrow">➔</span><span>[4] Контрабандист</span><span class="badge">Требования</span></div>
+      <ul class="rank-list">
+        <li><strong>Фарм:</strong> Положить на склад семьи 200г наркотиков и 2 000 патронов любого калибра.</li>
+        <li><strong>RP:</strong> Организовать RP-ограбление любого магазина одежды или закусочной вместе с 1–2 рангами (научи их делу).</li>
+        <li><strong>RP:</strong> Сделать одну качественную СС-ку (скриншот-ситуацию) на криминальную тему.</li>
+        <li><strong>Активность:</strong> Принять участие в 2-х семейных мероприятиях (стрелы, бизнес-вары, налёты).</li>
+        <li><strong>Срок нахождения на ранге:</strong> 3 дня.</li>
+      </ul>
+    </div>
+    <div class="rank-block">
+      <div class="rank-title"><span>[4] Контрабандист</span><span class="arrow">➔</span><span>[5] Смотрящий</span><span class="badge important">⭐ Особые условия</span></div>
+      <ul class="rank-list">
+        <li><strong>ПОВЫШЕНИЕ СТРОГО ПО ДОВЕРЕННОСТИ ГЛ. ЗАМА ИЛИ ГЛАВЫ (6–7).</strong></li>
+        <li>Ты должен быть примером для состава, помогать младшим в рации, тащить на мероприятиях и не иметь косяков/выговоров за последнее время. Отчёты на этот ранг не принимаются.</li>
+      </ul>
+    </div>
+    <div class="rank-block">
+      <div class="rank-title"><span>[5] Смотрящий</span><span class="arrow">➔</span><span>[6] Гл. Зам синдиката</span><span class="badge important">⭐ Особые условия</span></div>
+      <ul class="rank-list">
+        <li><strong>ПОВЫШЕНИЕ СТРОГО ПО ДОВЕРЕННОСТИ ГЛАВЫ СИНДИКАТА (7).</strong></li>
+        <li>Выдаётся только самым доверенным людям, готовым держать в страхе весь состав, проверять этот форум и пинать ленивых.</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Дворец и автопарк -->
+  <div class="palace-section" id="palaceSection">
+    <h2>🏰 Дворец и автопарк</h2>
+    <div class="palace-info">
+      <div class="address">📍 Дом расположен в городе <strong>Los-Santos</strong> на горе <strong>Vine-Wood</strong>, номер дома <strong>33</strong></div>
+      <div class="location">Район — Вице-Сити, Florida #2</div>
+    </div>
+    <h3 style="color:#fff; font-size:18px; margin: 16px 0 8px;">🚗 Автопарк</h3>
+    <div class="car-grid">
+      <div class="car-item">
+        <i class="fas fa-car car-icon"></i>
+        <span class="car-name">Mercedes-Benz G65</span>
+      </div>
+      <div class="car-item">
+        <i class="fas fa-car-side car-icon"></i>
+        <span class="car-name">BMW M5 F90</span>
+      </div>
+      <div class="car-item">
+        <i class="fas fa-car car-icon"></i>
+        <span class="car-name">BMW i8</span>
+      </div>
+      <div class="car-item">
+        <i class="fas fa-car car-icon"></i>
+        <span class="car-name">Infinity Q60</span>
+      </div>
+      <div class="car-item">
+        <i class="fas fa-motorcycle car-icon"></i>
+        <span class="car-name">Yamaha YZF-R1</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Форум -->
+  <div class="forum-section" id="forumSection">
+    <h2>💬 Форум</h2>
+    <div class="forum-card">
+      <div class="forum-label">Обсуждения, новости и объявления семьи:</div>
+      <a href="https://forum.empirecolle.com" class="forum-link" target="_blank">
+        <i class="fas fa-google"></i> Перейти на форум
+      </a>
+      <div style="margin-top: 12px; color:#aaa; font-size:14px;">🔒 Доступ только для участников семьи (логин по приглашению).</div>
+    </div>
+  </div>
+
+  <!-- ===== НОВЫЙ ФУТЕР (только иконка VK) ===== -->
+  <div class="footer-line">
+    <div style="display: flex; gap: 20px; align-items: center; flex-wrap: wrap;">
+      <span class="red">Empire Colle</span>
+      <span>© 2026</span>
+      <span class="purple">Florida #2</span>
+    </div>
+    <div style="display: flex; gap: 16px; align-items: center;">
+      <a href="https://vk.me/join/eUM0kxmrEP5hu10mL5oXiyKtHORcop5mfTI=" target="_blank" title="VK">
+        <i class="fab fa-vk"></i>
+      </a>
+    </div>
+  </div>
+
+</div> <!-- /container -->
+
+<!-- ===== МОДАЛЬНОЕ ОКНО АВТОРИЗАЦИИ ===== -->
+<div class="auth-overlay" id="authOverlay">
+  <div class="auth-modal">
+    <button class="close-auth" id="closeAuthBtn">✕</button>
+
+    <div class="main-title">EMPIRE COLLE</div>
+    <div class="sub-title">Florida #2 <span>·</span> вход на сайт семьи</div>
+
+    <div class="auth-tabs" id="authTabs">
+      <div class="tab active" data-tab="login">Вход</div>
+      <div class="tab" data-tab="register">Регистрация</div>
+    </div>
+
+    <!-- Форма входа -->
+    <div class="auth-form active" id="loginForm">
+      <label>
+        Ваш Nick-Name
+        <input type="text" id="loginUsername" placeholder="Nick-Name" />
+      </label>
+      <label>
+        Пароль
+        <input type="password" id="loginPassword" placeholder="Введите пароль" />
+      </label>
+      <div class="auth-error" id="loginError"></div>
+      <button class="auth-submit" id="loginSubmit">Войти</button>
+
+      <ul class="note-list">
+        <li><strong>1.</strong> Пароль писать <strong>НЕ ИГРОВОЙ</strong></li>
+        <li><strong>2.</strong> Пароли у нас не сохраняются</li>
+      </ul>
+
+      <div class="or-divider">или</div>
+      <button class="guest-btn" id="guestLoginBtn">🎭 Войти в режиме гостя</button>
+    </div>
+
+    <!-- Форма регистрации -->
+    <div class="auth-form" id="registerForm">
+      <label>
+        Ваш Nick-Name
+        <input type="text" id="regUsername" placeholder="Nick-Name" />
+      </label>
+      <label>
+        Пароль
+        <input type="password" id="regPassword" placeholder="Минимум 6 символов" />
+      </label>
+      <label>
+        Повторите пароль
+        <input type="password" id="regPasswordConfirm" placeholder="Повторите пароль" />
+      </label>
+      <div class="auth-error" id="registerError"></div>
+      <button class="auth-submit" id="registerSubmit">Создать аккаунт</button>
+
+      <ul class="note-list">
+        <li><strong>1.</strong> Пароль писать <strong>НЕ ИГРОВОЙ</strong></li>
+        <li><strong>2.</strong> Пароли у нас не сохраняются</li>
+      </ul>
+
+      <div class="or-divider">или</div>
+      <button class="guest-btn" id="guestRegisterBtn">🎭 Войти в режиме гостя</button>
+    </div>
+
+  </div>
+</div>
+
+<!-- ==================== JAVASCRIPT ==================== -->
+<script>
+  // ============================================================
+  // 1. НАСТРОЙКА FIREBASE (ВАШИ ДАННЫЕ)
+  // ============================================================
+  const firebaseConfig = {
+    apiKey: "AIzaSyAMqxu9FTH570asf-zdYqo8QrD_EjWKBg8",
+    authDomain: "empirecolle-c0b0e.firebaseapp.com",
+    databaseURL: "https://empirecolle-c0b0e-default-rtdb.firebaseio.com",
+    projectId: "empirecolle-c0b0e",
+    storageBucket: "empirecolle-c0b0e.firebasestorage.app",
+    messagingSenderId: "53588426911",
+    appId: "1:53588426911:web:debe0d6f1874d80ce6a2aa"
+  };
+
+  // Инициализация Firebase
+  let db = null;
+  let firebaseInitialized = false;
+
+  try {
+    firebase.initializeApp(firebaseConfig);
+    db = firebase.database();
+    firebaseInitialized = true;
+    console.log('✅ Firebase подключена!');
+  } catch (e) {
+    console.warn('⚠️ Firebase не настроена. Работаем с локальными данными.');
+    firebaseInitialized = false;
+  }
+
+  // ============================================================
+  // 2. ВЕСЬ ОСТАЛЬНОЙ JS КОД (ВАШ)
+  // ============================================================
+  (function() {
+    // ----- УПРАВЛЕНИЕ ШТОРКОЙ -----
+    const burger = document.getElementById('burgerBtn');
+    const drawer = document.getElementById('drawer');
+    const overlay = document.getElementById('overlay');
+    const closeBtn = document.getElementById('closeDrawerBtn');
+
+    function toggleDrawer(open) {
+      if (open === undefined) {
+        drawer.classList.toggle('open');
+        overlay.classList.toggle('visible');
+        burger.classList.toggle('active');
+      } else if (open) {
+        drawer.classList.add('open');
+        overlay.classList.add('visible');
+        burger.classList.add('active');
+      } else {
+        drawer.classList.remove('open');
+        overlay.classList.remove('visible');
+        burger.classList.remove('active');
+      }
+    }
+    burger.addEventListener('click', function(e) { e.stopPropagation(); toggleDrawer(); });
+    closeBtn.addEventListener('click', function() { toggleDrawer(false); });
+    overlay.addEventListener('click', function() { toggleDrawer(false); });
+
+    // Переключение разделов
+    const drawerBtns = document.querySelectorAll('.drawer-btn');
+    const sections = {
+      about: document.getElementById('aboutSection'),
+      achievements: document.getElementById('achievementsSection'),
+      giveaway: document.getElementById('giveawaySection'),
+      leadership: document.getElementById('leadershipSection'),
+      unions: document.getElementById('unionsSection'),
+      promo: document.getElementById('promoSection'),
+      palace: document.getElementById('palaceSection'),
+      forum: document.getElementById('forumSection')
+    };
+
+    drawerBtns.forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        const target = btn.getAttribute('data-target');
+
+        drawerBtns.forEach(function(b) { b.classList.remove('active'); });
+        btn.classList.add('active');
+
+        for (let key in sections) {
+          if (sections[key]) {
+            sections[key].classList.remove('visible');
+          }
+        }
+
+        if (target && sections[target]) {
+          sections[target].classList.add('visible');
+        }
+
+        toggleDrawer(false);
+      });
+    });
+
+    // ----- ТАЙМЕР ДЛЯ РОЗЫГРЫША -----
+    function startCountdown() {
+      const container = document.getElementById('countdownContainer');
+      const endDate = new Date('2026-08-17T19:00:00+03:00');
+
+      function updateTimer() {
+        const now = new Date();
+        const diff = endDate - now;
+
+        if (diff <= 0) {
+          container.innerHTML = '<div class="countdown-ended">🎉 Розыгрыш завершён! Следите за результатами.</div>';
+          return;
+        }
+
+        const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+        const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+        const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+        const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+
+        container.innerHTML = `
+          <div class="countdown-timer">
+            <div class="time-block">
+              <span class="number">${String(days).padStart(2, '0')}</span>
+              <span class="label">Дни</span>
+            </div>
+            <span class="separator">:</span>
+            <div class="time-block">
+              <span class="number">${String(hours).padStart(2, '0')}</span>
+              <span class="label">Часы</span>
+            </div>
+            <span class="separator">:</span>
+            <div class="time-block">
+              <span class="number">${String(minutes).padStart(2, '0')}</span>
+              <span class="label">Минуты</span>
+            </div>
+            <span class="separator">:</span>
+            <div class="time-block">
+              <span class="number">${String(seconds).padStart(2, '0')}</span>
+              <span class="label">Секунды</span>
+            </div>
+          </div>
+        `;
+      }
+
+      updateTimer();
+      setInterval(updateTimer, 1000);
+    }
+
+    startCountdown();
+
+    // ----- АВТОРИЗАЦИЯ (с проверкой уникальности) -----
+    const authArea = document.getElementById('authArea');
+    const loginBtn = document.getElementById('loginBtn');
+    const logoutBtn = document.getElementById('logoutBtn');
+    const usernameDisplay = document.getElementById('usernameDisplay');
+    const userInfo = document.getElementById('userInfo');
+
+    const authOverlay = document.getElementById('authOverlay');
+    const closeAuthBtn = document.getElementById('closeAuthBtn');
+
+    const loginForm = document.getElementById('loginForm');
+    const registerForm = document.getElementById('registerForm');
+    const tabs = document.querySelectorAll('.tab');
+    const loginUsername = document.getElementById('loginUsername');
+    const loginPassword = document.getElementById('loginPassword');
+    const loginError = document.getElementById('loginError');
+    const loginSubmit = document.getElementById('loginSubmit');
+    const regUsername = document.getElementById('regUsername');
+    const regPassword = document.getElementById('regPassword');
+    const regPasswordConfirm = document.getElementById('regPasswordConfirm');
+    const registerError = document.getElementById('registerError');
+    const registerSubmit = document.getElementById('registerSubmit');
+    const guestLoginBtn = document.getElementById('guestLoginBtn');
+    const guestRegisterBtn = document.getElementById('guestRegisterBtn');
+
+    function getUsers() {
+      try { return JSON.parse(localStorage.getItem('users')) || {}; } catch { return {}; }
+    }
+    function saveUsers(users) {
+      localStorage.setItem('users', JSON.stringify(users));
+    }
+
+    let currentUser = null;
+
+    function updateAuthUI() {
+      if (currentUser) {
+        authArea.classList.add('logged-in');
+        usernameDisplay.textContent = currentUser;
+      } else {
+        authArea.classList.remove('logged-in');
+        usernameDisplay.textContent = '';
+      }
+    }
+
+    function restoreSession() {
+      const saved = localStorage.getItem('currentUser');
+      if (saved) {
+        const users = getUsers();
+        if (users[saved] || saved === 'Гость') {
+          currentUser = saved;
+        } else {
+          localStorage.removeItem('currentUser');
+        }
+      }
+      updateAuthUI();
+    }
+
+    function openAuth() { authOverlay.classList.add('open'); }
+    function closeAuth() { authOverlay.classList.remove('open'); }
+    loginBtn.addEventListener('click', openAuth);
+    closeAuthBtn.addEventListener('click', closeAuth);
+    authOverlay.addEventListener('click', function(e) {
+      if (e.target === authOverlay) closeAuth();
+    });
+
+    tabs.forEach(function(tab) {
+      tab.addEventListener('click', function() {
+        tabs.forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        const target = tab.getAttribute('data-tab');
+        if (target === 'login') {
+          loginForm.classList.add('active');
+          registerForm.classList.remove('active');
+        } else {
+          registerForm.classList.add('active');
+          loginForm.classList.remove('active');
+        }
+        loginError.textContent = '';
+        registerError.textContent = '';
+      });
+    });
+
+    loginSubmit.addEventListener('click', function() {
+      const username = loginUsername.value.trim();
+      const password = loginPassword.value.trim();
+      if (!username || !password) {
+        loginError.textContent = 'Заполните все поля.';
+        return;
+      }
+      const users = getUsers();
+      if (!users[username]) {
+        loginError.textContent = 'Пользователь не найден.';
+        return;
+      }
+      if (users[username] !== password) {
+        loginError.textContent = 'Неверный пароль.';
+        return;
+      }
+      currentUser = username;
+      localStorage.setItem('currentUser', username);
+      closeAuth();
+      updateAuthUI();
+      loginUsername.value = '';
+      loginPassword.value = '';
+      loginError.textContent = '';
+    });
+
+    registerSubmit.addEventListener('click', function() {
+      const username = regUsername.value.trim();
+      const password = regPassword.value.trim();
+      const confirm = regPasswordConfirm.value.trim();
+
+      registerError.textContent = '';
+
+      if (!username || !password || !confirm) {
+        registerError.textContent = 'Заполните все поля.';
+        return;
+      }
+      if (password !== confirm) {
+        registerError.textContent = 'Пароли не совпадают.';
+        return;
+      }
+      if (password === username) {
+        registerError.textContent = 'Пароль не должен совпадать с игровым ником.';
+        return;
+      }
+      if (password.length < 6) {
+        registerError.textContent = 'Пароль должен быть не менее 6 символов.';
+        return;
+      }
+
+      const users = getUsers();
+      if (users[username]) {
+        registerError.textContent = 'Пользователь с таким ником уже существует. Выберите другой.';
+        return;
+      }
+
+      users[username] = password;
+      saveUsers(users);
+
+      currentUser = username;
+      localStorage.setItem('currentUser', username);
+      closeAuth();
+      updateAuthUI();
+
+      regUsername.value = '';
+      regPassword.value = '';
+      regPasswordConfirm.value = '';
+      registerError.textContent = '';
+
+      tabs.forEach(t => t.classList.remove('active'));
+      document.querySelector('.tab[data-tab="login"]').classList.add('active');
+      loginForm.classList.add('active');
+      registerForm.classList.remove('active');
+    });
+
+    function guestLogin() {
+      currentUser = 'Гость';
+      localStorage.setItem('currentUser', 'Гость');
+      closeAuth();
+      updateAuthUI();
+    }
+    guestLoginBtn.addEventListener('click', guestLogin);
+    guestRegisterBtn.addEventListener('click', guestLogin);
+
+    logoutBtn.addEventListener('click', function() {
+      currentUser = null;
+      localStorage.removeItem('currentUser');
+      updateAuthUI();
+    });
+
+    loginPassword.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') loginSubmit.click();
+    });
+    loginUsername.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') loginSubmit.click();
+    });
+    regPasswordConfirm.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') registerSubmit.click();
+    });
+
+    restoreSession();
+  })();
+</script>
+
+</body>
+</html>
